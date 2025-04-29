@@ -95,7 +95,49 @@ public class A2 implements A2Interface {
 
     @Override
     public Map<String, ExitInfo> computeClosestExits(Map<String, List<Edge>> roomGraph, List<String> exitRooms) {
-        return null;
+        Map<String, ExitInfo> result = new HashMap<>();
+        Map<String, Integer> distances = new HashMap<>();
+        Map<String, String> nearestExit = new HashMap<>();
+
+        PriorityQueue<String> pq = new PriorityQueue<>(Comparator.comparingInt(distances::get));
+        Set<String> visited = new HashSet<>();
+
+        for (String room : roomGraph.keySet()) {
+            distances.put(room, Integer.MAX_VALUE);
+        }
+
+        for (String exit : exitRooms) {
+            distances.put(exit, 0);
+            nearestExit.put(exit, exit);
+            pq.add(exit);
+        }
+
+        while (!pq.isEmpty()) {
+            String current = pq.poll();
+            if (visited.contains(current)) continue;
+            visited.add(current);
+
+            int currDist = distances.get(current);
+
+            for (Edge edge : roomGraph.getOrDefault(current, new ArrayList<>())) {
+                String neighbor = edge.to;
+                int newDist = currDist + edge.weight;
+
+                if (newDist < distances.get(neighbor)) {
+                    distances.put(neighbor, newDist);
+                    nearestExit.put(neighbor, nearestExit.get(current));
+                    pq.add(neighbor);
+                }
+            }
+        }
+
+        for (String room : roomGraph.keySet()) {
+            int dist = distances.getOrDefault(room, Integer.MAX_VALUE);
+            String exit = nearestExit.getOrDefault(room, null);
+            result.put(room, new ExitInfo(exit, dist));
+        }
+
+        return result;
     }
 
 
