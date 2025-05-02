@@ -143,7 +143,89 @@ public class A2 implements A2Interface {
 
     @Override
     public List<String> recoverSignal(List<String> corrupted, Map<String, List<String>> graph, String exitRoom) {
-        return null;
+        int n = corrupted.size();
+        Set<String> rooms = graph.keySet();
+    
+        // dp[i][room] = min cost to process first i corrupted tokens ending at room
+        Map<String, int[]> dp = new HashMap<>();
+        Map<String, String[]> parent = new HashMap<>();
+        Map<String, String[]> moveType = new HashMap<>();
+    
+        for (String room : rooms) {
+            dp.put(room, new int[n + 1]);
+            Arrays.fill(dp.get(room), Integer.MAX_VALUE / 2);
+            parent.put(room, new String[n + 1]);
+            moveType.put(room, new String[n + 1]);
+        }
+    
+        // base case: start from START room with 0 corrupted tokens
+        if (dp.containsKey("START")) {
+            dp.get("START")[0] = 0;
+        }
+    
+        // Fill DP table
+        for (int i = 0; i <= n; i++) {
+            for (String r : rooms) {
+                if (i > 0) {
+                    // Deletion: stay at r, consume corrupted token
+                    int cost = dp.get(r)[i - 1] + 1;
+                    if (cost < dp.get(r)[i]) {
+                        dp.get(r)[i] = cost;
+                        parent.get(r)[i] = r;
+                        moveType.get(r)[i] = "DELETE";
+                    }
+                }
+    
+                for (String p : rooms) {
+                    if (graph.getOrDefault(p, Collections.emptyList()).contains(r)) {
+                        if (i > 0) {
+                            // Match/Substitute: move p -> r, consume corrupted[i-1]
+                            int matchCost = dp.get(p)[i - 1] + (r.equals(corrupted.get(i - 1)) ? 0 : 1);
+                            if (matchCost < dp.get(r)[i]) {
+                                dp.get(r)[i] = matchCost;
+                                parent.get(r)[i] = p;
+                                moveType.get(r)[i] = "MATCH";
+                            }
+                        }
+                
+                        // Insertion: move p -> r without consuming token
+                        if (!p.equals(r)) {  // prevent unnecessary self-insertion
+                            int insertCost = dp.get(p)[i] + 1;
+                            if (insertCost < dp.get(r)[i]) {
+                                dp.get(r)[i] = insertCost;
+                                parent.get(r)[i] = p;
+                                moveType.get(r)[i] = "INSERT";
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    
+        // Recover path from (n, exitRoom)
+        List<String> path = new ArrayList<>();
+        String currentRoom = exitRoom;
+        int currentIndex = n;
+        String prevRoom = null;
+    
+        while (currentRoom != null && (currentIndex > 0 || !currentRoom.equals("START"))) {
+            if(!path.contains(currentRoom)){
+                path.add(currentRoom);
+            }
+
+            String move = moveType.get(currentRoom)[currentIndex];
+            prevRoom = parent.get(currentRoom)[currentIndex];
+            if (move == null) {
+                break;
+            }
+            if (move.equals("MATCH") || move.equals("DELETE")) {
+                currentIndex--;
+            }
+            currentRoom = prevRoom;
+        }
+    
+        Collections.reverse(path);
+        return path;
     }
     
     
